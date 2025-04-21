@@ -1,6 +1,7 @@
 # prepare_data.py
 # Script to load and perform initial data preparation and diagnostic checks on the student dataset.
 
+import os
 import pandas as pd
 import numpy as np
 import sys
@@ -140,6 +141,19 @@ def main():
 
     # Distribution diagnostics
     distribution_diagnostics(data)
+
+    # Ensure processed data directory exists
+    processed_dir = os.path.dirname('../data/processed/cleaned_data.csv')
+    os.makedirs(processed_dir, exist_ok=True)
+
+    # Save the cleaned dataset for future use
+    output_path = '../data/processed/cleaned_data.csv'
+    try:
+        data.to_csv(output_path, index=False)
+        logging.info(f"Dataset saved successfully to {output_path}")
+    except Exception as e:
+        logging.error(f"Failed to save dataset: {e}")
+        sys.exit(1)
 
     logging.info("Data preparation completed successfully.")
 
