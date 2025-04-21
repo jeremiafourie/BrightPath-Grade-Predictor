@@ -1,4 +1,3 @@
-# prepare_data.py
 # Script to load and perform initial data preparation and diagnostic checks on the student dataset.
 
 import os
