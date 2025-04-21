@@ -1,31 +1,82 @@
-def gpa_to_grade_class(gpa):
-    """
-    Convert GPA to GradeClass based on the following scale:
-        0: 'A' (GPA >= 3.5)
-        1: 'B' (3.0 <= GPA < 3.5)
-        2: 'C' (2.5 <= GPA < 3.0)
-        3: 'D' (2.0 <= GPA < 2.5)
-        4: 'F' (GPA < 2.0)
+# preprocess_data.py
+# Script to apply feature engineering transformations to the cleaned student dataset.
 
-    Parameters:
-    -----------
-    gpa : float or pd.Series
-        A single GPA value or a pandas Series of GPA values.
+import os
+import sys
+import logging
+import pandas as pd
+import numpy as np
 
-    Returns:
-    --------
-    int or pd.Series:
-        Corresponding GradeClass value(s).
+
+def setup_logging():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+
+
+def gpa_to_grade_class(gpa_series: pd.Series) -> pd.Series:
     """
-    if hasattr(gpa, 'apply'):  # If gpa is a pandas Series
-        return gpa.apply(gpa_to_grade_class)
-    if gpa >= 3.5:
-        return 0
-    elif gpa >= 3.0:
-        return 1
-    elif gpa >= 2.5:
-        return 2
-    elif gpa >= 2.0:
-        return 3
-    else:
-        return 4
+    Map continuous GPA into ordinal GradeClass:
+    <=1→4, 1-2→3, 2-3→2, 3-4→1, >4→0
+    """
+    bins = [-np.inf, 1.0, 2.0, 3.0, 4.0, np.inf]
+    labels = [4, 3, 2, 1, 0]
+    return pd.cut(gpa_series, bins=bins, labels=labels).astype(int)
+
+
+def main():
+    setup_logging()
+    raw_path = os.path.join('data', 'processed', 'cleaned_data.csv')
+    out_dir = os.path.join('data', 'processed')
+    out_path = os.path.join(out_dir, 'engineered_data.csv')
+
+    # ensure directory
+    os.makedirs(out_dir, exist_ok=True)
+
+    # load
+    try:
+        logging.info(f"Loading cleaned data from {raw_path}")
+        df = pd.read_csv(raw_path)
+    except Exception as e:
+        logging.error(f"Failed to load cleaned data: {e}")
+        sys.exit(1)
+
+    # create target
+    try:
+        logging.info("Mapping GPA to GradeClass")
+        df['GradeClass'] = gpa_to_grade_class(df['GPA'])
+        logging.info("Dropping original GPA column")
+        df.drop(columns=['GPA'], inplace=True)
+
+        # extra features
+        logging.info("Creating engagement score")
+        flags = ['Tutoring','Extracurricular','Sports','Music','Volunteering']
+        df['Engagement'] = df[flags].sum(axis=1)
+
+        logging.info("Creating absence bands")
+        df['AbsenceBand'] = pd.cut(
+            df['Absences'], bins=[-1,5,15,25,df['Absences'].max()],
+            labels=['Very Low','Low','Medium','High']
+        )
+
+        logging.info("Log-transforming StudyTimeWeekly")
+        df['LogStudyTime'] = np.log1p(df['StudyTimeWeekly'])
+
+        logging.info("Creating family support index")
+        df['FamilySupport'] = df['ParentalEducation'] * df['ParentalSupport']
+
+        logging.info("Creating interaction: Study_x_Support")
+        df['Study_x_Support'] = df['LogStudyTime'] * df['FamilySupport']
+
+        # save
+        df.to_csv(out_path, index=False)
+        logging.info(f"Engineered data saved to {out_path}")
+    except Exception as e:
+        logging.error(f"Error during feature engineering: {e}")
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
