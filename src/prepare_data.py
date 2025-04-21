@@ -33,126 +33,61 @@ def load_data(filepath):
         sys.exit(1)
 
 
-def initial_inspection(df):
-    """
-    Perform initial inspection: info and descriptive statistics.
-    """
-    try:
-        logging.info("Performing initial data.info() check...")
-        df.info()
-        logging.info("data.info() completed.")
-
-        logging.info("Generating descriptive statistics with data.describe()...")
-        desc = df.describe().T
-        print(desc)
-        logging.info("data.describe() completed.")
-    except Exception as e:
-        logging.error(f"Error during initial inspection: {e}")
-
-
-def missing_and_duplicates(df):
-    """
-    Check for missing values and duplicate rows.
-    """
-    try:
-        logging.info("Checking for missing values...")
-        missing = df.isnull().sum()
-        pct_missing = (missing / len(df) * 100).round(2)
-        missing_df = pd.concat([missing, pct_missing.rename('pct_missing')], axis=1)
-        print("Missing values per column:")
-        print(missing_df)
-
-        logging.info("Checking for duplicate rows...")
-        dup_count = df.duplicated().sum()
-        logging.info(f"Duplicate rows found: {dup_count}")
-    except Exception as e:
-        logging.error(f"Error during missing/duplicate checks: {e}")
-
-
-def outlier_detection(df):
-    """
-    Detect outliers using the IQR method for numeric features.
-    """
-    try:
-        logging.info("Starting outlier detection via IQR method...")
-        numeric_cols = df.select_dtypes(include=[np.number]).columns
-        outlier_summary = []
-        for col in numeric_cols:
-            Q1 = df[col].quantile(0.25)
-            Q3 = df[col].quantile(0.75)
-            IQR = Q3 - Q1
-            lower = Q1 - 1.5 * IQR
-            upper = Q3 + 1.5 * IQR
-            count = ((df[col] < lower) | (df[col] > upper)).sum()
-            outlier_summary.append((col, int(count), float(lower), float(upper)))
-
-        outliers_df = pd.DataFrame(
-            outlier_summary,
-            columns=['feature', 'n_outliers', 'lower_bound', 'upper_bound']
-        )
-        print("Outlier summary:")
-        print(outliers_df)
-        logging.info("Outlier detection completed.")
-    except Exception as e:
-        logging.error(f"Error during outlier detection: {e}")
-
-
-def distribution_diagnostics(df):
-    """
-    Compute skewness and kurtosis for numeric features.
-    """
-    try:
-        logging.info("Computing skewness and kurtosis...")
-        numeric_cols = df.select_dtypes(include=[np.number]).columns
-        stats = pd.DataFrame({
-            'skewness': df[numeric_cols].skew(),
-            'kurtosis': df[numeric_cols].kurtosis()
-        }).round(2)
-        print("Skewness & Kurtosis:")
-        print(stats)
-        logging.info("Distribution diagnostics completed.")
-    except Exception as e:
-        logging.error(f"Error during distribution diagnostics: {e}")
-
-
 def main():
     setup_logging()
 
-    # Replace with your actual file path
-    data_filepath = 'data/raw/student_performance_data.csv'
+    # Define input and output paths relative to project root
+    raw_path = os.path.join('data', 'raw', 'student_performance_data.csv')
+    processed_dir = os.path.join('data', 'processed')
+    output_path = os.path.join(processed_dir, 'cleaned_data.csv')
 
-    # Load data
-    data = load_data(data_filepath)
+    # Create processed directory if it doesn't exist
+    os.makedirs(processed_dir, exist_ok=True)
 
-    # Drop unnecessary columns (e.g., StudentID)
+    # Load the raw data
+    data = load_data(raw_path)
+
+    # Drop StudentID if present
     if 'StudentID' in data.columns:
         logging.info("Dropping 'StudentID' column...")
         data = data.drop(columns=['StudentID'])
-        logging.info("'StudentID' dropped successfully.")
 
     # Initial inspection
-    initial_inspection(data)
+    logging.info("Performing data.info() and describe()...")
+    data.info()
+    desc = data.describe().T
+    print(desc)
 
     # Missing value and duplicate checks
-    missing_and_duplicates(data)
+    logging.info("Checking for missing values and duplicates...")
+    missing = data.isnull().sum()
+    dup_count = data.duplicated().sum()
+    print("Missing values per column:\n", missing)
+    logging.info(f"Duplicate rows found: {dup_count}")
 
-    # Outlier detection
-    outlier_detection(data)
+    # Outlier detection via IQR
+    logging.info("Detecting outliers via IQR method...")
+    numeric_cols = data.select_dtypes(include=[np.number]).columns
+    outliers = {}
+    for col in numeric_cols:
+        Q1 = data[col].quantile(0.25)
+        Q3 = data[col].quantile(0.75)
+        IQR = Q3 - Q1
+        lower, upper = Q1 - 1.5*IQR, Q3 + 1.5*IQR
+        outliers[col] = int(((data[col] < lower) | (data[col] > upper)).sum())
+    print("Outlier counts per column:\n", outliers)
 
     # Distribution diagnostics
-    distribution_diagnostics(data)
+    logging.info("Calculating skewness and kurtosis...")
+    skew_kurt = data[numeric_cols].agg(['skew', 'kurtosis']).T.round(2)
+    print("Skewness and Kurtosis:\n", skew_kurt)
 
-    # Ensure processed data directory exists
-    processed_dir = os.path.dirname('../data/processed/cleaned_data.csv')
-    os.makedirs(processed_dir, exist_ok=True)
-
-    # Save the cleaned dataset for future use
-    output_path = '../data/processed/cleaned_data.csv'
+    # Save cleaned data
     try:
         data.to_csv(output_path, index=False)
-        logging.info(f"Dataset saved successfully to {output_path}")
+        logging.info(f"Cleaned data saved to {output_path}")
     except Exception as e:
-        logging.error(f"Failed to save dataset: {e}")
+        logging.error(f"Failed to save cleaned data: {e}")
         sys.exit(1)
 
     logging.info("Data preparation completed successfully.")
