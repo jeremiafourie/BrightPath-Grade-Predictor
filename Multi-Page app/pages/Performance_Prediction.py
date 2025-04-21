@@ -21,85 +21,125 @@ neural_network_model = MLPClassifier()
 features = ['Age', 'Gender', 'Ethnicity', 'ParentalEducation' 'StudyTimeWeekly', 'Absences', 'Tutoring', 'ParentalSupport', 'Extracurricular', 'Sports', 'Muisc', 'Vulunteering', 'GPA']
 
 
-layout = html.Div([
-    html.H2("Welcome to the Performance Predictions Page"),
-    html.P("This page provides insights from the performance predictions."),
+layout = dbc.Container([
 
-    #chat code
+    dbc.Row([
+        dbc.Col([
 
-    html.H3("Student Performance Prediction"),
+            html.H2("Welcome to the Performance Predictions Page"),
+            html.P("This page provides insights from the performance predictions."),
+
+
+            html.H3("Chooose your features!"),
+
+        ],align="center", className="text-center", style={'margin-bottom': '50px'}),
+    ]),
+
     
     # Input Fields
-    html.Div([
-        html.Label("Age:"),
-        dcc.Input(id='age', type='number', placeholder='Enter Age'),
+    dbc.Row([
+        dbc.Col([
+
+            html.Label("Age:"),
+
+            dcc.Input(id='age', type='number', placeholder='Enter Age'),
+
+        ]),
+
+        dbc.Col([
+
+            html.Label("Gender:"),
+
+            dcc.Dropdown(
+                id ='gender-dropdown',
+                options=[
+                    {'label': 'Male', 'value': '1'},
+                    {'label': 'Female', 'value': '0'}
+                ],
+                placeholder="Select Gender"
+            ),
+
+        ]),
     ]),
     
-    html.Div([
-        html.Label("Gender:"),
-        dcc.Dropdown(
-            id='gender-dropdown',
-            options=[
-                {'label': 'Male', 'value': '1'},
-                {'label': 'Female', 'value': '0'}
-            ],
-            placeholder="Select Gender"
-        ),
+    dbc.Row([
+        dbc.Col([
+
+            html.Label("Ethnicity:"),
+
+            dcc.Dropdown(
+                id='ethnicity-dropdown',
+                options=[
+                    {'label': 'Group 0', 'value': '0'},
+                    {'label': 'Group 1', 'value': '1'},
+                    {'label': 'Group 2', 'value': '2'},
+                    {'label': 'Group 3', 'value': '3'}
+                ],
+                placeholder="Select Ethnicity"
+            ),
+
+        ]),
+    ]),
+
+    dbc.Row([
+        dbc.Col([
+            
+            html.Label("Study Time Weekly (hours):"),
+            dcc.Input(id='study-time', type='number', placeholder='Enter Weekly Study Time'),
+
+        ]),
+
+        dbc.Col([
+
+            html.Label("Absences:"),
+            dcc.Input(id='absences', type='number', placeholder='Enter Absences'),
+
+        ]),
     ]),
     
-    html.Div([
-        html.Label("Ethnicity:"),
-        dcc.Dropdown(
-            id='ethnicity-dropdown',
-            options=[
-                {'label': 'Group 0', 'value': '0'},
-                {'label': 'Group 1', 'value': '1'},
-                {'label': 'Group 2', 'value': '2'},
-                {'label': 'Group 3', 'value': '3'}
-            ],
-            placeholder="Select Ethnicity"
-        ),
+    dbc.Row([
+        dbc.Col([
+
+            html.Label("Parental Support:"),
+
+            dcc.RadioItems(
+                id='parental-support',
+                options=[
+                    {'label': 'Yes', 'value': '1'},
+                    {'label': 'No', 'value': '0'}
+                ],
+                value='Yes'
+            ),
+
+        ]),
     ]),
     
-    html.Div([
-        html.Label("Study Time Weekly (hours):"),
-        dcc.Input(id='study-time', type='number', placeholder='Enter Weekly Study Time'),
-    ]),
-    
-    html.Div([
-        html.Label("Absences:"),
-        dcc.Input(id='absences', type='number', placeholder='Enter Absences'),
-    ]),
-    
-    html.Div([
-        html.Label("Parental Support:"),
-        dcc.RadioItems(
-            id='parental-support',
-            options=[
-                {'label': 'Yes', 'value': '1'},
-                {'label': 'No', 'value': '0'}
-            ],
-            value='Yes'
-        ),
-    ]),
-    
-    # Model Selector Dropdown
-    html.Div([
-        html.Label("Select Model:"),
-        dcc.Dropdown(
-            id='model-dropdown',
-            options=[
-                {'label': 'Logistic Regression', 'value': 'logistic'},
-                {'label': 'Random Forest', 'value': 'random_forest'},
-                {'label': 'XGBoost', 'value': 'xgboost'},
-                {'label': 'Neural Network', 'value': 'neural_network'}
-            ],
-            value='logistic'
-        ),
-    ]),
-    
-    # Prediction Button
-    html.Button('Predict', id='predict-button'),
+
+    dbc.Row([
+        dbc.Col([
+
+            html.Label("Select Model:"),
+
+            dcc.Dropdown(
+                id='model-dropdown',
+                options=[
+                    {'label': 'Logistic Regression', 'value': 'logistic'},
+                    {'label': 'Random Forest', 'value': 'random_forest'},
+                    {'label': 'XGBoost', 'value': 'xgboost'},
+                    {'label': 'Neural Network', 'value': 'neural_network'}
+                ],
+                value='logistic'
+            ),
+
+        ]),
+
+        dbc.Col([
+
+            dbc.Button('Predict', id='predict-button'),
+
+        ]),
+    ],
+    justify='center',align='center', style={'margin-top': '20px'}),
     
     # Prediction Output
     html.Div(id='prediction-output')

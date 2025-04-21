@@ -24,8 +24,12 @@ app.layout = dbc.Container([
         
         width=12)
     ]),
-    html.Hr(),
-    dash.page_container  # 👈 This is where your pages render
+    #html.Hr(),
+    html.Div([
+
+    ],
+    style={'margin': '50px'}),
+    dash.page_container  # 👈 This is where our pages render
 ], 
 fluid=True,)
 

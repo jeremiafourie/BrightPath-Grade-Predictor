@@ -19,31 +19,69 @@ df = pd.read_csv("Multi-Page app/data/student_performance_data.csv")
 
 
 layout = dbc.Container([
-    html.H2("Welcome to the EDA Insights Page"),
-    html.P("This page provides insights from the exploratory data analysis."),
-    html.P(df['GradeClass'].unique()),
 
-    #   html.H2("📊 EDA Insights & Visualizations"),
+    dbc.Row([
+        dbc.Col([
+            html.H2("Welcome to the EDA Insights Page"),
+            html.P("This page provides insights from the exploratory data analysis."),
 
-    html.Div([
-        html.Label("Filter by Gender"),
-        dcc.Dropdown(
-            id='gender-filter',
-            options=[{'label': "Male", 'value': 1},
-                     {'label': "Female", 'value': 0}],
-            value=None,
-            placeholder="Select gender...",
-            clearable=True,
-        )
-    ], style={'width': '30%', 'margin-bottom': '20px'}),
+    
 
-    dcc.Graph(id="gpa-vs-absences"),
-    dcc.Graph(id="gradeclass-dist"),
-    dcc.Graph(id="studytime-vs-gradeclass"),
-    dcc.Graph(id="parent-support-vs-gpa"),
-    dcc.Graph(id="heatmap-corr")
-   
+            html.Div([
+                html.Label("Filter by Gender"),
+                dcc.Dropdown(
+                    id='gender-filter',
+                    options=[
+                        {'label': "Male", 'value': 1},
+                        {'label': "Female", 'value': 0}
+                    ],
+                    value=None,
+                    placeholder="Select gender...",
+                    clearable=True,
+                )
+            ], style={
+                'width': '300px',           # fixed width helps with centering
+                'margin': '0 auto 20px',    # this centers it horizontally
+                'textAlign': 'left'         # optional: align label text inside box
+            }),
+
+        ],align="center",style={"text-align": "center"}),
+        
+    ],justify="center"),
+
+    
+
+
+    dbc.Card([
+        dbc.Row([
+            
+            dbc.Col(
+                dbc.CardBody([
+                    dcc.Graph(id="gpa-vs-absences"),
+                    dcc.Graph(id="gradeclass-dist"),
+                ]),
+            ),
+
+            dbc.Col([
+                dbc.CardBody([
+                    dcc.Graph(id="studytime-vs-gradeclass"),
+                    dcc.Graph(id="parent-support-vs-gpa"),
+                ]),
+            ]),
+
+        ]),
+
+        dbc.Row([
+            dbc.Col([
+                dbc.CardBody([
+                    dcc.Graph(id="heatmap-corr"),
+                ])
+            ]),
+        ]),
+
+    ]),        
 ])
+
 
 # Calculate correlation matrix
 corr_matrix = df.corr()
