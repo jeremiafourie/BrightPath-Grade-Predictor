@@ -60,35 +60,19 @@ def main():
         df.drop(columns=['GPA'], inplace=True)
 
         # 2) Engagement score
-        # logging.info("Creating engagement score")
-        # flags = ['Tutoring', 'Extracurricular', 'Sports', 'Music', 'Volunteering']
-        # df['Engagement'] = df[flags].sum(axis=1)
+        logging.info("Creating engagement score")
+        flags = ['Tutoring', 'Extracurricular', 'Sports', 'Music', 'Volunteering']
+        df['Engagement'] = df[flags].sum(axis=1)
 
-        # 3) Absence bands
-        # logging.info("Creating absence bands")
-        # df['AbsenceBand'] = pd.cut(
-        #     df['Absences'],
-        #     bins=[-np.inf, 2.0, 2.5, 3.0, 3.5, np.inf],
-        #     labels=['F', 'D', 'C', 'B', 'A']
-        # )
+        # 3) Family support index
+        logging.info("Creating family support index")
+        df['FamilySupport'] = df['ParentalEducation'] * df['ParentalSupport']
 
-        # 4) Log transform study time
-        # logging.info("Log-transforming StudyTimeWeekly")
-        # df['LogStudyTime'] = np.log1p(df['StudyTimeWeekly'])
-
-        # 5) Family support index
-        # logging.info("Creating family support index")
-        # df['FamilySupport'] = df['ParentalEducation'] * df['ParentalSupport']
-
-        # 6) Interaction term
-        # logging.info("Creating interaction: Study_x_Support")
-        # df['Study_x_Support'] = df['LogStudyTime'] * df['FamilySupport']
-
-        # 7) One-hot encode all remaining categorical columns
-        # cat_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
-        # if cat_cols:
-        #     logging.info(f"One-hot encoding columns: {cat_cols}")
-        #     df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
+        # 4) One-hot encode all remaining categorical columns
+        cat_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        if cat_cols:
+            logging.info(f"One-hot encoding columns: {cat_cols}")
+            df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
 
         # save engineered data
         df.to_csv(out_path, index=False)
