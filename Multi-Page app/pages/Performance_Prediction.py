@@ -1,4 +1,4 @@
-import os 
+import os  
 from pathlib import Path
 import joblib
 import tensorflow as tf
@@ -29,6 +29,18 @@ models_info = [
     {"key": "xgb",       "label": "XGBoost Classifier",         "path": "XGBClassifier.joblib",               "accuracy": 0.789, "recommended": False, "type": "sklearn", "task": "classification"},
     {"key": "nn",        "label": "Deep Learning MLP",          "path": "DeepLearningMLP.keras",              "accuracy": 0.808, "recommended": False, "type": "keras",   "task": "classification"}
 ]
+
+# Load preprocessing pipeline & feature list (if you saved these at training time)
+preprocessor = None
+feature_cols = None
+pp_path = ARTIFACTS_DIR / "preprocessor.joblib"
+fc_path = ARTIFACTS_DIR / "feature_columns.joblib"
+if pp_path.exists():
+    logging.info(f"Loading preprocessor from {pp_path}")
+    preprocessor = joblib.load(pp_path)
+if fc_path.exists():
+    logging.info(f"Loading feature list from {fc_path}")
+    feature_cols = joblib.load(fc_path)
 
 # Load each model
 loaded_models = {}
@@ -81,7 +93,7 @@ def create_form_row(field):
         dbc.Col(field['component'](id=field['id'], **field['props']), width=8)
     ], className="mb-3")
 
-# Page layout
+# Page layout (unchanged) …
 layout = dbc.Container([
     dbc.Row(dbc.Col(html.H2("Performance Predictions"), className="text-center mb-4")),
     dbc.Row(
@@ -100,32 +112,26 @@ layout = dbc.Container([
                     ], className="p-4"
                 ),
                 dbc.CardFooter(
-                    dbc.Button(
-                        "Predict Grade", id="predict-btn", color="primary", className="w-100 fw-bold", size="lg"
-                    ),
+                    dbc.Button("Predict Grade", id="predict-btn", color="primary", className="w-100 fw-bold", size="lg"),
                     className="p-0"
                 )
             ]), width=6
         ), className="justify-content-center mb-4"
     ),
-    # Prediction Result Modal
     dbc.Modal([
         dbc.ModalHeader(dbc.ModalTitle("Prediction Result")),
         dbc.ModalBody(id='modal-body'),
-        dbc.ModalFooter(
-            dbc.Button("Close", id='close-modal', className="ms-auto", n_clicks=0)
-        )
+        dbc.ModalFooter(dbc.Button("Close", id='close-modal', className="ms-auto", n_clicks=0))
     ], id='prediction-modal', is_open=False)
 ], fluid=True)
 
-# Callback to handle predictions and modal toggling
 @callback(
     Output('prediction-modal', 'is_open'),
     Output('modal-body', 'children'),
     [
         Input('predict-btn', 'n_clicks'),
         Input('close-modal', 'n_clicks'),
-        *[Input(field['id'], 'value') for field in INPUT_FIELDS],
+        *[Input(f['id'], 'value') for f in INPUT_FIELDS],
         Input('model-select', 'value')
     ]
 )
@@ -133,71 +139,71 @@ def predict(n_clicks, close_clicks, *values_and_model):
     ctx = dash.callback_context
     if not ctx.triggered:
         return False, None
-    trig_id = ctx.triggered[0]['prop_id'].split('.')[0]
-
-    # Close modal if clicked
-    if trig_id == 'close-modal':
+    trig = ctx.triggered[0]['prop_id'].split('.')[0]
+    if trig == 'close-modal':
         return False, dash.no_update
 
-    # On predict button click, compute and show prediction
-    if trig_id == 'predict-btn':
-        # Map inputs to DataFrame
-        ids = [field['id'] for field in INPUT_FIELDS]
-        cols = ['Age', 'Gender', 'Ethnicity', 'ParentalEducation', 'StudyTime', 'Absences',
-                'Tutoring', 'ParentalSupport', 'Extracurricular', 'Sports', 'Music', 'Volunteering']
-        raw_vals = dict(zip(ids, values_and_model[:-1]))
-        df = pd.DataFrame([{cols[i]: raw_vals[ids[i]] for i in range(len(ids))}])
+    # Build raw df
+    ids   = [f['id'] for f in INPUT_FIELDS]
+    cols  = ['Age','Gender','Ethnicity','ParentalEducation','StudyTime','Absences',
+             'Tutoring','ParentalSupport','Extracurricular','Sports','Music','Volunteering']
+    raw   = dict(zip(ids, values_and_model[:-1]))
+    df    = pd.DataFrame([{cols[i]: raw[ids[i]] for i in range(len(ids))}])
+    # Engineer
+    flags = ['Tutoring','Extracurricular','Sports','Music','Volunteering']
+    df['Engagement']    = df[flags].sum(axis=1)
+    df['FamilySupport'] = df['ParentalEducation'] * df['ParentalSupport']
+    df.drop(columns=flags, inplace=True)
 
-        # Feature engineering
-        flags = ['Tutoring', 'Extracurricular', 'Sports', 'Music', 'Volunteering']
-        df['Engagement'] = df[flags].sum(axis=1)
-        df['FamilySupport'] = df['ParentalEducation'] * df['ParentalSupport']
-        cat_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
-        if cat_cols:
-            df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
+    # One‐hot (if any)
+    cat_cols = df.select_dtypes(['object','category']).columns
+    if len(cat_cols):
+        df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
 
-        # Prepare features
+    # **Reindex to training features** (important for RF‐Reg and NN!)
+    if feature_cols is not None:
+        df = df.reindex(columns=feature_cols, fill_value=0)
+
+    # **Scale/transform** just like at train time
+    if preprocessor is not None:
+        X = preprocessor.transform(df)
+    else:
         X = df.values
-        model_key = values_and_model[-1]
-        spec = next(s for s in models_info if s["key"] == model_key)
-        model = loaded_models.get(model_key)
-        if model is None:
-            result = html.Div("Error: Model not found.", style={'color': 'red'})
+
+    # Select model + task
+    model_key = values_and_model[-1]
+    spec      = next(s for s in models_info if s["key"] == model_key)
+    model     = loaded_models[model_key]
+
+    grade_map = {
+        0: ("A","GPA ≥ 3.5"),
+        1: ("B","3.0 ≤ GPA < 3.5"),
+        2: ("C","2.5 ≤ GPA < 3.0"),
+        3: ("D","2.0 ≤ GPA < 2.5"),
+        4: ("F","GPA < 2.0")
+    }
+
+    # Branch by task
+    if spec["task"] == "classification":
+        if hasattr(model, 'predict_proba'):
+            probs = model.predict_proba(X)[0]
         else:
-            # Grade mapping
-            grade_map = {
-                0: ("A", "GPA ≥ 3.5"),
-                1: ("B", "3.0 ≤ GPA < 3.5"),
-                2: ("C", "2.5 ≤ GPA < 3.0"),
-                3: ("D", "2.0 ≤ GPA < 2.5"),
-                4: ("F", "GPA < 2.0")
-            }
+            raw_pred = model.predict(X)
+            probs = raw_pred[0] if (isinstance(raw_pred,np.ndarray) and raw_pred.ndim>1) else raw_pred
+        idx   = int(np.argmax(probs))
+        letter, desc = grade_map.get(idx, ("?",""))
+        conf  = float(np.max(probs))
+        color = 'green' if idx!=4 else 'red'
+        result = html.Div([
+            html.H4(f"Predicted Grade: {letter} ({desc})", style={'color':color}),
+            html.P(f"Confidence: {conf:.2f}")
+        ])
+    else:
+        raw_pred = model.predict(X)
+        val      = float(raw_pred[0]) if isinstance(raw_pred,np.ndarray) else float(raw_pred)
+        color    = 'green' if val>=2.0 else 'red'
+        result = html.Div([
+            html.H4(f"Predicted GPA: {val:.2f}", style={'color':color})
+        ])
 
-            # Branch explicitly by task
-            if spec["task"] == "classification":
-                # classification → get probabilities
-                if hasattr(model, 'predict_proba'):
-                    probs = model.predict_proba(X)[0]
-                else:
-                    raw_pred = model.predict(X)
-                    probs = raw_pred[0] if (isinstance(raw_pred, np.ndarray) and raw_pred.ndim > 1) else raw_pred
-                class_idx = int(np.argmax(probs))
-                letter, desc = grade_map.get(class_idx, ("?", ""))
-                conf = float(np.max(probs))
-                color = 'green' if class_idx != 4 else 'red'
-                result = html.Div([
-                    html.H4(f"Predicted Grade: {letter} ({desc})", style={'color': color}),
-                    html.P(f"Confidence: {conf:.2f}")
-                ])
-            else:
-                # regression → GPA
-                raw_pred = model.predict(X)
-                pred_val = float(raw_pred[0]) if isinstance(raw_pred, np.ndarray) else float(raw_pred)
-                color = 'green' if pred_val >= 2.0 else 'red'
-                result = html.Div([
-                    html.H4(f"Predicted GPA: {pred_val:.2f}", style={'color': color})
-                ])
-
-        return True, result
-
-    return False, None
+    return True, result
