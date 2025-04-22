@@ -22,12 +22,12 @@ logging.info(f"Loading models from {ARTIFACTS_DIR}")
 
 # Define your models with their metadata
 models_info = [
-    {"key": "scaled_lr", "label": "Scaled Logistic Regression", "path": "ScaledLogisticRegression.joblib", "accuracy": 0.71, "recommended": True, "type": "sklearn"},
-    {"key": "lr",        "label": "Logistic Regression",        "path": "LogisticRegression.joblib",          "accuracy": 0.689, "recommended": False, "type": "sklearn"},
-    {"key": "rf_clf",   "label": "Random Forest Classifier",   "path": "RandomForestClassifier.joblib","accuracy": 0.733, "recommended": False, "type": "sklearn"},
-    {"key": "rf_reg",   "label": "Random Forest Regressor",    "path": "RandomForestRegressor.joblib","accuracy": 0.708, "recommended": False, "type": "sklearn"},
-    {"key": "xgb",      "label": "XGBoost Classifier",        "path": "XGBClassifier.joblib",           "accuracy": 0.735, "recommended": False, "type": "sklearn"},
-    {"key": "nn",       "label": "Deep Learning MLP",         "path": "DeepLearningMLP.keras",          "accuracy": 0.760, "recommended": False, "type": "keras"}
+    {"key": "scaled_lr", "label": "Scaled Logistic Regression", "path": "ScaledLogisticRegression.joblib", "accuracy": 0.823, "recommended": True, "type": "sklearn"},
+    {"key": "lr",        "label": "Logistic Regression",        "path": "LogisticRegression.joblib",          "accuracy": 0.762, "recommended": False, "type": "sklearn"},
+    {"key": "rf_clf",   "label": "Random Forest Classifier",   "path": "RandomForestClassifier.joblib","accuracy": 0.770, "recommended": False, "type": "sklearn"},
+    {"key": "rf_reg",   "label": "Random Forest Regressor",    "path": "RandomForestRegressor.joblib","accuracy": 0.777, "recommended": False, "type": "sklearn"},
+    {"key": "xgb",      "label": "XGBoost Classifier",        "path": "XGBClassifier.joblib",           "accuracy": 0.789, "recommended": False, "type": "sklearn"},
+    {"key": "nn",       "label": "Deep Learning MLP",         "path": "DeepLearningMLP.keras",          "accuracy": 0.808, "recommended": False, "type": "keras"}
 ]
 
 # Load each model
