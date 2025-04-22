@@ -1,5 +1,12 @@
 dash
 dash-bootstrap-components
-matplotlib
-seaborn
+pandas
 numpy
+scikit-learn
+xgboost
+tensorflow
+joblib
+plotly
+seaborn
+matplotlib
+gunicorn

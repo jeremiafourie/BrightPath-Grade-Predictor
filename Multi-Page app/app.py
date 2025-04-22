@@ -5,6 +5,8 @@ import dash_bootstrap_components as dbc
 app = dash.Dash( use_pages=True, suppress_callback_exceptions=True,external_stylesheets=[dbc.themes.PULSE])
 app.title = "BrightPath Grade Predictor"
 
+server = app.server
+
 app.layout = dbc.Container([
 
     dcc.Location(id='url'),
@@ -34,4 +36,4 @@ app.layout = dbc.Container([
 fluid=True,)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)
