@@ -14,7 +14,6 @@ app.layout = dbc.Container([
     dbc.Row([
         dbc.Col(dbc.NavbarSimple(
             children=[
-                dbc.NavItem(dbc.NavLink("EDA Insights", href="/eda_insights")),
                 dbc.NavItem(dbc.NavLink("Student Performance Prediction", href="/performance_prediction")),
                 dbc.NavItem(dbc.NavLink("Model Comparison", href="/model_comparison")),
                 dbc.NavItem(dbc.NavLink("About", href="/about")),
