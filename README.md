@@ -13,7 +13,7 @@ This is a team project for Belgium Campus to predict student performance (`Grade
   - Juan Oosthuizen
   - Busisiwe Radebe
   - Phumlani Ntuli
-- **Submission Date:** 22 April 2025, 12:00 AM
+- **Submission Date:** 22 April 2025, 11:59 PM
 
 ### Problem Statement
 
