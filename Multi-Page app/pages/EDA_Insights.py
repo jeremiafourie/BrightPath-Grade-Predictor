@@ -128,6 +128,34 @@ def univariateCatigorical():
 
     return dcc.Graph(figure=fig)
 
+# Define a function to create bar charts for each column in ord_df
+def create_bar_charts(df, columns):
+    figs = []
+    
+    # Loop over each categorical variable to create a bar plot
+    for col in columns:
+        fig = px.bar(
+            df,
+            x=col,
+            color=col,  # Color the bars based on the categorical variable
+            title=f"Count of {col}",
+            labels={col: col},
+            category_orders={col: df[col].unique()},  # Ensure the order is consistent
+            color_discrete_sequence=px.colors.qualitative.Pastel  # Use pastel colors
+        )
+        figs.append(fig)
+    
+    return dcc.Graph(figure=figs)
+
+
+
+# Assuming ord_df is your DataFrame
+# ord_df = pd.read_csv('your_data.csv')
+ord_cols = ord_df.columns.tolist()
+
+# Generate the figures using the function
+figs = create_bar_charts(ord_df, ord_cols)
+
 layout = dbc.Container([
 
     dbc.Row([
@@ -195,6 +223,10 @@ layout = dbc.Container([
                 html.Li("Tutoring, extracurriculars, and sports all hover around the 30–40 % mark, so they’ll each carry enough variation to help explain GradeClass—but music and volunteering, at ~20 % and ~16 %, may need to be grouped or re‑encoded if sparse classes is going to be a problem.")
             ]),
         ]),
+    ]),
+
+    dbc.Row([
+       *create_bar_charts(ord_df, ord_cols),
     ]),
 
     dbc.Card([
