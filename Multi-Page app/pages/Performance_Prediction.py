@@ -1,4 +1,4 @@
-import os
+import os 
 from pathlib import Path
 import joblib
 import tensorflow as tf
@@ -20,14 +20,14 @@ if not ARTIFACTS_DIR.exists():
 logging.basicConfig(level=logging.INFO)
 logging.info(f"Loading models from {ARTIFACTS_DIR}")
 
-# Define your models with their metadata
+# Define your models with their metadata (including a 'task' field)
 models_info = [
-    {"key": "scaled_lr", "label": "Scaled Logistic Regression", "path": "ScaledLogisticRegression.joblib", "accuracy": 0.823, "recommended": True, "type": "sklearn"},
-    {"key": "lr",        "label": "Logistic Regression",        "path": "LogisticRegression.joblib",          "accuracy": 0.762, "recommended": False, "type": "sklearn"},
-    {"key": "rf_clf",   "label": "Random Forest Classifier",   "path": "RandomForestClassifier.joblib","accuracy": 0.770, "recommended": False, "type": "sklearn"},
-    {"key": "rf_reg",   "label": "Random Forest Regressor",    "path": "RandomForestRegressor.joblib","accuracy": 0.777, "recommended": False, "type": "sklearn"},
-    {"key": "xgb",      "label": "XGBoost Classifier",        "path": "XGBClassifier.joblib",           "accuracy": 0.789, "recommended": False, "type": "sklearn"},
-    {"key": "nn",       "label": "Deep Learning MLP",         "path": "DeepLearningMLP.keras",          "accuracy": 0.808, "recommended": False, "type": "keras"}
+    {"key": "scaled_lr", "label": "Scaled Logistic Regression", "path": "ScaledLogisticRegression.joblib", "accuracy": 0.823, "recommended": True,  "type": "sklearn", "task": "classification"},
+    {"key": "lr",        "label": "Logistic Regression",        "path": "LogisticRegression.joblib",          "accuracy": 0.762, "recommended": False, "type": "sklearn", "task": "classification"},
+    {"key": "rf_clf",    "label": "Random Forest Classifier",   "path": "RandomForestClassifier.joblib",      "accuracy": 0.770, "recommended": False, "type": "sklearn", "task": "classification"},
+    {"key": "rf_reg",    "label": "Random Forest Regressor",    "path": "RandomForestRegressor.joblib",       "accuracy": 0.777, "recommended": False, "type": "sklearn", "task": "regression"},
+    {"key": "xgb",       "label": "XGBoost Classifier",         "path": "XGBClassifier.joblib",               "accuracy": 0.789, "recommended": False, "type": "sklearn", "task": "classification"},
+    {"key": "nn",        "label": "Deep Learning MLP",          "path": "DeepLearningMLP.keras",              "accuracy": 0.808, "recommended": False, "type": "keras",   "task": "classification"}
 ]
 
 # Load each model
@@ -159,12 +159,11 @@ def predict(n_clicks, close_clicks, *values_and_model):
         # Prepare features
         X = df.values
         model_key = values_and_model[-1]
+        spec = next(s for s in models_info if s["key"] == model_key)
         model = loaded_models.get(model_key)
         if model is None:
             result = html.Div("Error: Model not found.", style={'color': 'red'})
         else:
-            # Run prediction
-            raw_pred = model.predict(X)
             # Grade mapping
             grade_map = {
                 0: ("A", "GPA ≥ 3.5"),
@@ -173,27 +172,32 @@ def predict(n_clicks, close_clicks, *values_and_model):
                 3: ("D", "2.0 ≤ GPA < 2.5"),
                 4: ("F", "GPA < 2.0")
             }
-            # Classification
-            if (hasattr(model, 'predict_proba') or
-                (isinstance(raw_pred, np.ndarray) and raw_pred.ndim > 1 and raw_pred.shape[1] > 1)):
-                probs = (model.predict_proba(X)[0] if hasattr(model, 'predict_proba') else raw_pred[0])
+
+            # Branch explicitly by task
+            if spec["task"] == "classification":
+                # classification → get probabilities
+                if hasattr(model, 'predict_proba'):
+                    probs = model.predict_proba(X)[0]
+                else:
+                    raw_pred = model.predict(X)
+                    probs = raw_pred[0] if (isinstance(raw_pred, np.ndarray) and raw_pred.ndim > 1) else raw_pred
                 class_idx = int(np.argmax(probs))
                 letter, desc = grade_map.get(class_idx, ("?", ""))
                 conf = float(np.max(probs))
-                # Color: green for pass (not F), red for fail (F)
                 color = 'green' if class_idx != 4 else 'red'
                 result = html.Div([
                     html.H4(f"Predicted Grade: {letter} ({desc})", style={'color': color}),
                     html.P(f"Confidence: {conf:.2f}")
                 ])
             else:
-                # Regression or single output (GPA)
+                # regression → GPA
+                raw_pred = model.predict(X)
                 pred_val = float(raw_pred[0]) if isinstance(raw_pred, np.ndarray) else float(raw_pred)
-                # Color: green for pass GPA >= 2.0, red otherwise
                 color = 'green' if pred_val >= 2.0 else 'red'
                 result = html.Div([
                     html.H4(f"Predicted GPA: {pred_val:.2f}", style={'color': color})
                 ])
+
         return True, result
 
     return False, None
