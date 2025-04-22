@@ -15,7 +15,7 @@ import dash_bootstrap_components as dbc
 
 dash.register_page(__name__, path="/eda_insights")
 
-df = pd.read_csv("Multi-Page app/data/student_performance_data.csv") 
+df = pd.read_csv("data/raw/student_performance_data.csv")
 
 ######################## eda.ipynb ###########################
 
@@ -78,8 +78,8 @@ def createHistograms():
 
 
     # Remove any extra subplots (if there are any)
-    for j in range(i + 1, len(axes)):
-        fig.delaxes(axes[j])
+    # for j in range(i + 1, len(axes)):
+    #     fig.delaxes(axes[j])
 
     plt.tight_layout()
     # plt.show()
