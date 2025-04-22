@@ -160,7 +160,7 @@ def predict(n_clicks, close_clicks, *values_and_model):
         if cat_cols:
             df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
 
-        # Prepare features and select model
+        # Prepare features
         X = df.values
         model_key = values_and_model[-1]
         model = loaded_models.get(model_key)
@@ -169,23 +169,34 @@ def predict(n_clicks, close_clicks, *values_and_model):
         else:
             # Run prediction
             raw_pred = model.predict(X)
-            # Classification if probabilities or multi-dim output
+            # Grade mapping
+            grade_map = {
+                0: ("A", "GPA ≥ 3.5"),
+                1: ("B", "3.0 ≤ GPA < 3.5"),
+                2: ("C", "2.5 ≤ GPA < 3.0"),
+                3: ("D", "2.0 ≤ GPA < 2.5"),
+                4: ("F", "GPA < 2.0")
+            }
+            # Classification
             if (hasattr(model, 'predict_proba') or
                 (isinstance(raw_pred, np.ndarray) and raw_pred.ndim > 1 and raw_pred.shape[1] > 1)):
-                # get probabilities array
                 probs = (model.predict_proba(X)[0] if hasattr(model, 'predict_proba') else raw_pred[0])
                 class_idx = int(np.argmax(probs))
+                letter, desc = grade_map.get(class_idx, ("?", ""))
                 conf = float(np.max(probs))
+                # Color: green for pass (not F), red for fail (F)
+                color = 'green' if class_idx != 4 else 'red'
                 result = html.Div([
-                    html.H4(f"Predicted Class: {class_idx}"),
+                    html.H4(f"Predicted Grade: {letter} ({desc})", style={'color': color}),
                     html.P(f"Confidence: {conf:.2f}")
                 ])
             else:
-                # Regression or single-output
-                # flatten to scalar
-                pred_val = float(raw_pred[0]) if (isinstance(raw_pred, np.ndarray) and raw_pred.size) else float(raw_pred)
+                # Regression or single output (GPA)
+                pred_val = float(raw_pred[0]) if isinstance(raw_pred, np.ndarray) else float(raw_pred)
+                # Color: green for pass GPA >= 2.0, red otherwise
+                color = 'green' if pred_val >= 2.0 else 'red'
                 result = html.Div([
-                    html.H4(f"Predicted Value: {pred_val:.2f}")
+                    html.H4(f"Predicted GPA: {pred_val:.2f}", style={'color': color})
                 ])
         return True, result
 
