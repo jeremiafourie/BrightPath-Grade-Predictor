@@ -25,7 +25,7 @@ layout = dbc.Container([
                 Juan Oosthuizen
                 Busisiwe Radebe
                 Phumlani Ntuli \n
-                Submission Date: 22 April 2025, 12:00 AM""", 
+                Submission Date: 22 April 2025, 11:59 PM""", 
                 style={'white-space': 'pre-line', 'font-size': '18px', 'line-height': '1.5'}),
 
         ],
