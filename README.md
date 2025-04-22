@@ -30,78 +30,6 @@ We hypothesize that:
 
 These hypotheses are explored in `notebooks/02_eda.ipynb` via visualizations and statistical analyses.
 
-## 📂 Repository Structure
-
-```
-BrightPath-Grade-Predictor/
-├── artifacts/            # Trained models, plots, and other outputs
-├── data/
-│   ├── raw/              # Original CSV files
-│   └── processed/        # Cleaned & feature‑engineered CSV
-├── notebooks/
-│   ├── 01_feature_engineering.ipynb
-│   ├── 02_eda.ipynb
-│   └── 03_modeling.ipynb
-├── src/                  # Python modules
-│   ├── data_processing.py
-│   ├── feature_engineering.py
-│   ├── modeling.py
-│   └── utils.py
-├── requirements.txt
-└── README.md
-```
-
-## 🛠️ Setup Instructions
-
-1. **Clone the repo**
-
-   ```bash
-   git clone https://github.com/your‑org/BrightPath-Grade-Predictor.git
-   cd BrightPath-Grade-Predictor
-   ```
-
-2. **Create & activate a virtual environment**
-
-   ```bash
-   python3.8 -m venv venv
-   source venv/bin/activate   # on Mac/Linux
-   .\venv\Scripts\activate  # on Windows
-   ```
-
-3. **Install dependencies**
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Prepare data**
-   - Place raw CSV(s) in `data/raw/`
-   - Run feature engineering:
-     ```bash
-     jupyter nbconvert --to notebook --execute notebooks/01_feature_engineering.ipynb
-     ```
-   - Processed data will be saved to `data/processed/engineered_data.csv`
-
-## 🚀 Usage
-
-1. **Exploratory Data Analysis**  
-   Open and run `notebooks/02_eda.ipynb` to review distributions, correlations, and bivariate plots.
-
-2. **Model Training & Evaluation**  
-   Execute `notebooks/03_modeling.ipynb` (or run the Python script):
-
-   ```bash
-   python src/modeling.py --input data/processed/engineered_data.csv --output artifacts/
-   ```
-
-   This will:
-
-   - Perform an 80/20 stratified split
-   - Train baseline models (Logistic Regression, Random Forest, XGBoost)
-   - Build & train a deep‑learning MLP
-   - Conduct hyperparameter tuning and SMOTE experiments
-   - Save all models and plots under `artifacts/`
-
 3. **Inference**  
    Load the serialized model (e.g. `artifacts/ScaledLogisticRegression.joblib`) in your own script to predict new student records.
 
@@ -134,9 +62,9 @@ pip install -r requirements.txt
 ## 📝 Notes
 
 - **Division of work:**
-  - _Jeremia Fourie:_ Data loading, cleaning, and feature engineering
-  - _Juan Oosthuizen:_ Exploratory Data Analysis & visualizations
-  - _Busisiwe Radebe:_ Baseline modeling and hyperparameter tuning
-  - _Phumlani Ntuli:_ Deep learning implementation and report writing
+  - _Jeremia Fourie:_ Exploratory Data Analysis, visualizations and feature engineering
+  - _Juan Oosthuizen:_ Baseline modeling and hyperparameter tuning
+  - _Busisiwe Radebe:_ Data loading, cleaning, and report writing
+  - _Phumlani Ntuli:_ dash app and deployment
 
 Feel free to open issues or submit pull requests for improvements!
