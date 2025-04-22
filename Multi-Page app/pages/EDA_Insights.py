@@ -6,6 +6,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import plotly.tools as tls
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 import os
 
@@ -38,7 +39,7 @@ ord_df = data[ordinal_vars].copy()
 
 ###############################################################
 
-def createHistograms():
+def univariateNumerical():
     
     Histogram_list = []
 
@@ -49,19 +50,8 @@ def createHistograms():
     n_cols = 3
     n_rows = (len(num_cols) + n_cols - 1) // n_cols
 
-    # Create subplots
-    fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(5 * n_cols, 4 * n_rows))
-    axes = axes.flatten()
-
     # Loop over each numerical variable to create a histogram with KDE
-    # for i, col in enumerate(num_cols):
-    #     sns.histplot(num_df[col], kde=True, bins=25, ax=axes[i], color='skyblue')
-    #     axes[i].set_title(f"Histogram of {col}")
-    #     axes[i].set_xlabel(col)
-    #     axes[i].set_ylabel("Frequency")
-    #     Histogram_list.append(dcc.Graph(figure=axes, id=f'Histogram-{col}'))
-
-    for col in num_df.columns:
+    for i ,col in enumerate(num_cols):
         fig = px.histogram(
             num_df,
             x=col,
@@ -73,19 +63,70 @@ def createHistograms():
             xaxis_title=col,
             yaxis_title="Frequency"
         )
+
+        fig.update_traces(
+            marker_line_color='black',
+            marker_line_width=1.5,
+        )
         
-        Histogram_list.append(dcc.Graph(figure=fig, id=f'Histogram-{col}'))
+        Histogram_list.append(
 
+            dbc.Col(
+                dcc.Graph(figure=fig, id=f'Histogram-{col}'),
+                width=4,
+            )
 
-    # Remove any extra subplots (if there are any)
-    # for j in range(i + 1, len(axes)):
-    #     fig.delaxes(axes[j])
+        )
+        
 
     plt.tight_layout()
-    # plt.show()
 
     return Histogram_list
 
+def univariateCatigorical():
+    
+
+    # Get list of categorical column names
+    cat_cols = cat_df.columns.tolist()
+
+    # Define grid size
+    n_cols = 4
+    n_rows = (len(cat_cols) + n_cols - 1) // n_cols
+
+    # Create subplot grid for pie charts
+    fig = make_subplots(rows=n_rows, cols=n_cols, specs=[[{'type':'domain'}]*n_cols for _ in range(n_rows)],
+                        subplot_titles=[f"Distribution of {col}" for col in cat_cols])
+
+    # Add pie charts to subplots
+    for idx, col in enumerate(cat_cols):
+        row = idx // n_cols + 1
+        col_pos = idx % n_cols + 1
+        
+        counts = cat_df[col].value_counts()
+        
+        fig.add_trace(
+            go.Pie(
+                labels=counts.index,
+                values=counts.values,
+                name=col,
+                hole=0.4,
+                marker=dict(colors=px.colors.qualitative.Pastel)
+            ),
+            row=row,
+            col=col_pos
+        )
+
+    # Adjust layout
+    fig.update_layout(
+        title_text="Categorical Variable Distributions",
+        height=300 * n_rows,
+        showlegend=False
+    )
+
+    # Optional: display in Dash
+    
+
+    return dcc.Graph(figure=fig)
 
 layout = dbc.Container([
 
@@ -120,17 +161,39 @@ layout = dbc.Container([
 
     
 
+    dbc.Row([
+        dbc.Col([
 
+            html.H1("Univariate Analysis"),
+            html.H2("Distribution of Numerical Variables"),
+
+        ]),
+    ]),
+
+    dbc.Row([
+        *univariateNumerical(),
+    ]),
 
     dbc.Row([
         dbc.Col([
 
-            html.Div([
-                html.H2("Distribution of Numerical Variables"),
-                *createHistograms()
-            
-            ]),
+           html.Ul([
+               html.Li("StudyTimeWeekly: The majority of students cluster between 0–10 hours/week, with a long right tail stretching to ~20 hrs. This suggests a small subset of very high‑effort students—worth flagging as “super‑studiers” or potential outliers."),
+               html.Li("Absences: Absences center around 10–20 days, but there’s a tail up to 29. That tail may indicate chronic absenteeism requiring special handling or capping."),
+               html.Li("GPA: GPA has a peak around 1.5–2.0, then a secondary bump near 4.0 (ceiling effect). The perfect‑4 spike suggests grade inflation or particularly high achievers."),
+           ]),
+           
+        ]),
+    ]),
 
+    dbc.Row([
+        dbc.Col([
+            html.H2("Distribution of Categorical Variables"),
+            univariateCatigorical(),
+
+            html.Ul([
+                html.Li("Tutoring, extracurriculars, and sports all hover around the 30–40 % mark, so they’ll each carry enough variation to help explain GradeClass—but music and volunteering, at ~20 % and ~16 %, may need to be grouped or re‑encoded if sparse classes is going to be a problem.")
+            ]),
         ]),
     ]),
 
