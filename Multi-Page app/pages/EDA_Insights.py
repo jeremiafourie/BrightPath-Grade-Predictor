@@ -17,6 +17,75 @@ dash.register_page(__name__, path="/eda_insights")
 
 df = pd.read_csv("Multi-Page app/data/student_performance_data.csv") 
 
+######################## eda.ipynb ###########################
+
+data = pd.read_csv("data/processed/cleaned_data.csv")
+
+# Numerical variables (continuous or discrete without inherent order)
+numerical_vars = ['StudyTimeWeekly', 'Absences', 'GPA']
+
+# Categorical variables (nominal, no inherent order)
+categorical_vars = ['Gender', 'Ethnicity', 'Tutoring', 'Extracurricular', 
+                    'Sports', 'Music', 'Volunteering']
+
+# Ordinal variables (categorical with a natural order)
+ordinal_vars = ['Age', 'ParentalEducation', 'ParentalSupport', 'GradeClass']
+
+# Create separate DataFrames for numerical, categorical, and ordinal variables
+num_df = data[numerical_vars].copy()
+cat_df = data[categorical_vars].copy()
+ord_df = data[ordinal_vars].copy()
+
+###############################################################
+
+def createHistograms():
+    
+    Histogram_list = []
+
+    num_cols = num_df.columns.tolist()
+
+    # Determine grid size based on the number of variables (here 5 variables)
+    # We'll use 2 rows and 3 columns (6 subplots) and remove the unused subplot.
+    n_cols = 3
+    n_rows = (len(num_cols) + n_cols - 1) // n_cols
+
+    # Create subplots
+    fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(5 * n_cols, 4 * n_rows))
+    axes = axes.flatten()
+
+    # Loop over each numerical variable to create a histogram with KDE
+    # for i, col in enumerate(num_cols):
+    #     sns.histplot(num_df[col], kde=True, bins=25, ax=axes[i], color='skyblue')
+    #     axes[i].set_title(f"Histogram of {col}")
+    #     axes[i].set_xlabel(col)
+    #     axes[i].set_ylabel("Frequency")
+    #     Histogram_list.append(dcc.Graph(figure=axes, id=f'Histogram-{col}'))
+
+    for col in num_df.columns:
+        fig = px.histogram(
+            num_df,
+            x=col,
+            nbins=25,
+            title=f"Histogram of {col}",
+            color_discrete_sequence=["skyblue"]
+        )
+        fig.update_layout(
+            xaxis_title=col,
+            yaxis_title="Frequency"
+        )
+        
+        Histogram_list.append(dcc.Graph(figure=fig, id=f'Histogram-{col}'))
+
+
+    # Remove any extra subplots (if there are any)
+    for j in range(i + 1, len(axes)):
+        fig.delaxes(axes[j])
+
+    plt.tight_layout()
+    # plt.show()
+
+    return Histogram_list
+
 
 layout = dbc.Container([
 
@@ -52,11 +121,25 @@ layout = dbc.Container([
     
 
 
+
+    dbc.Row([
+        dbc.Col([
+
+            html.Div([
+                html.H2("Distribution of Numerical Variables"),
+                *createHistograms()
+            
+            ]),
+
+        ]),
+    ]),
+
     dbc.Card([
         dbc.Row([
             
             dbc.Col(
                 dbc.CardBody([
+                   
                     dcc.Graph(id="gpa-vs-absences"),
                     dcc.Graph(id="gradeclass-dist"),
                 ]),
@@ -85,6 +168,9 @@ layout = dbc.Container([
 
 # Calculate correlation matrix
 corr_matrix = df.corr()
+
+
+
 
 
 @callback(

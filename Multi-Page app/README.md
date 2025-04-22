@@ -43,29 +43,6 @@ Multi-Page App/
 ```
 </pre>
 
-## 🛠️ Setup Instructions
-
-- TODO: Explanation on how to set up the project
-
-## 🚀 Usage
-
-- TODO: Explanation on how to use the project
-
-## 📊 Key Findings
-
-- TODO: To be updated upon project completion
-
-## 🔧 Requirements
-
-- Python 3.8+
-- Libraries:
-  - pandas
-  - numpy
-  - seaborn
-  - matplotlib
-  - scikit-learn
-  - jupyter
-
 ## 📝 Notes
 
 oof... uh...
