@@ -45,7 +45,7 @@ These hypotheses are explored in `notebooks/02_eda.ipynb` via visualizations and
 - **Bivariate Trends:**
   - Higher StudyTimeWeekly and GPA—and lower Absences—correlate with higher GradeClass.
   - Participation in tutoring and extracurriculars increases with GradeClass; smaller gains seen for Music & Volunteering.
-  - Absences vs. GPA has a strong negative correlation (~–0.92); StudyTime vs. GPA is modestly positive (~+0.18); ParentalSupport vs. GPA is weakly positive (~+0.19).
+  - Absences vs. GPA has a strong negative correlation (–0.92); StudyTime vs. GPA is modestly positive (+0.18); ParentalSupport vs. GPA is weakly positive (~+0.19).
 - **Group-Level Summary:** As GradeClass increases from 0 to 4, average StudyTimeWeekly and GPA both rise while Absences fall—underscoring the impact of attendance and study habits on performance.
 
 ## 🔧 Requirements
