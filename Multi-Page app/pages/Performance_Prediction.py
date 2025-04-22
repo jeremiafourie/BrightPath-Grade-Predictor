@@ -1,207 +1,199 @@
+import os
+from pathlib import Path
+import joblib
+import tensorflow as tf
+import numpy as np
+import pandas as pd
 import dash
 from dash import html, dcc, callback, Input, Output
-import dash_bootstrap_components as dbc  
-import pandas as pd
-import numpy as np
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from xgboost import XGBClassifier
-from sklearn.neural_network import MLPClassifier
-import plotly.graph_objects as go
+import dash_bootstrap_components as dbc
+import logging
 
-dash.register_page(__name__, path="/performance_prediction",suppress_callback_exceptions=True)
+# Register page
+dash.register_page(__name__, path="/performance_prediction", suppress_callback_exceptions=True)
 
+# Locate artifacts folder (project-root/artifacts/)
+ARTIFACTS_DIR = Path(__file__).resolve().parent.parent.parent / "artifacts"
+if not ARTIFACTS_DIR.exists():
+    raise FileNotFoundError(f"Could not find artifacts/ at {ARTIFACTS_DIR}")
 
-# For demonstration purposes, im going to initialize models here
-logistic_model = LogisticRegression()
-random_forest_model = RandomForestClassifier()
-xgboost_model = XGBClassifier()
-neural_network_model = MLPClassifier()
+logging.basicConfig(level=logging.INFO)
+logging.info(f"Loading models from {ARTIFACTS_DIR}")
 
-features = ['Age', 'Gender', 'Ethnicity', 'ParentalEducation' 'StudyTimeWeekly', 'Absences', 'Tutoring', 'ParentalSupport', 'Extracurricular', 'Sports', 'Muisc', 'Vulunteering', 'GPA']
+# Define your models with their metadata
+models_info = [
+    {"key": "scaled_lr", "label": "Scaled Logistic Regression", "path": "ScaledLogisticRegression.joblib", "accuracy": 0.71, "recommended": True, "type": "sklearn"},
+    {"key": "lr",        "label": "Logistic Regression",        "path": "LogisticRegression.joblib",          "accuracy": 0.689, "recommended": False, "type": "sklearn"},
+    {"key": "rf_clf",   "label": "Random Forest Classifier",   "path": "RandomForestClassifier.joblib","accuracy": 0.733, "recommended": False, "type": "sklearn"},
+    {"key": "rf_reg",   "label": "Random Forest Regressor",    "path": "RandomForestRegressor.joblib","accuracy": 0.708, "recommended": False, "type": "sklearn"},
+    {"key": "xgb",      "label": "XGBoost Classifier",        "path": "XGBClassifier.joblib",           "accuracy": 0.735, "recommended": False, "type": "sklearn"},
+    {"key": "nn",       "label": "Deep Learning MLP",         "path": "DeepLearningMLP.keras",          "accuracy": 0.760, "recommended": False, "type": "keras"}
+]
 
+# Load each model
+loaded_models = {}
+for spec in models_info:
+    fullpath = ARTIFACTS_DIR / spec["path"]
+    logging.info(f"Loading {spec['label']} from {fullpath}")
+    if spec["type"] == "sklearn":
+        loaded_models[spec["key"]] = joblib.load(fullpath)
+    else:
+        loaded_models[spec["key"]] = tf.keras.models.load_model(str(fullpath))
 
+# Build model selector options
+dropdown_options = []
+for spec in models_info:
+    label = f"{spec['label']} ({spec['accuracy']*100:.1f}%)"
+    if spec['recommended']:
+        label += " [Recommended]"
+    dropdown_options.append({"label": label, "value": spec['key']})
+
+# Define input fields
+INPUT_FIELDS = [
+    {"label": "Age", "id": "age", "component": dcc.Input,      "props": {"type": "number", "min": 0, "value": 18}},
+    {"label": "Gender", "id": "gender", "component": dcc.Dropdown, "props": {"options": [{"label": "Male","value": 0},{"label": "Female","value": 1}], "value": 0}},
+    {"label": "Ethnicity", "id": "ethnicity", "component": dcc.Dropdown, "props": {"options": [
+        {"label": "Caucasian","value": 0}, {"label": "African American","value": 1},
+        {"label": "Asian","value": 2},       {"label": "Other","value": 3}
+    ], "value": 0}},
+    {"label": "Parental Education", "id": "parent-edu", "component": dcc.Dropdown, "props": {"options": [
+        {"label": "None","value": 0}, {"label": "High School","value": 1},
+        {"label": "Some College","value": 2}, {"label": "Bachelor's","value": 3},
+        {"label": "Higher Study","value": 4}
+    ], "value": 0}},
+    {"label": "Study Time Weekly (hrs)", "id": "study-time", "component": dcc.Input, "props": {"type": "number", "min": 0, "value": 0}},
+    {"label": "Absences", "id": "absences", "component": dcc.Input, "props": {"type": "number", "min": 0, "value": 0}},
+    {"label": "Tutoring", "id": "tutoring", "component": dcc.RadioItems, "props": {"options": [{"label": "Yes","value": 1},{"label": "No","value": 0}], "value": 0, "inline": True}},
+    {"label": "Parental Support", "id": "parent-support", "component": dcc.RadioItems, "props": {"options": [
+        {"label": "None","value": 0},{"label": "Low","value": 1},{"label": "Moderate","value": 2},
+        {"label": "High","value": 3},{"label": "Very High","value": 4}
+    ], "value": 0}},
+    {"label": "Extracurricular", "id": "extracurricular", "component": dcc.RadioItems, "props": {"options": [{"label":"Yes","value":1},{"label":"No","value":0}], "value": 0, "inline": True}},
+    {"label": "Sports", "id": "sports", "component": dcc.RadioItems, "props": {"options": [{"label":"Yes","value":1},{"label":"No","value":0}], "value": 0, "inline": True}},
+    {"label": "Music", "id": "music", "component": dcc.RadioItems, "props": {"options": [{"label":"Yes","value":1},{"label":"No","value":0}], "value": 0, "inline": True}},
+    {"label": "Volunteering", "id": "volunteering", "component": dcc.RadioItems, "props": {"options": [{"label":"Yes","value":1},{"label":"No","value":0}], "value": 0, "inline": True}}
+]
+
+# Helper to create form rows
+def create_form_row(field):
+    return dbc.Row([
+        dbc.Label(field['label'], width=4, className="fw-semibold"),
+        dbc.Col(field['component'](id=field['id'], **field['props']), width=8)
+    ], className="mb-3")
+
+# Page layout
 layout = dbc.Container([
+    dbc.Row(dbc.Col(html.H2("Performance Predictions"), className="text-center mb-4")),
+    dbc.Row(
+        dbc.Col(
+            dbc.Card([
+                dbc.CardBody(
+                    [
+                        *[create_form_row(f) for f in INPUT_FIELDS],
+                        html.Hr(),
+                        create_form_row({
+                            'label': 'Model',
+                            'id': 'model-select',
+                            'component': dcc.Dropdown,
+                            'props': {'options': dropdown_options, 'value': 'scaled_lr'}
+                        })
+                    ], className="p-4"
+                ),
+                dbc.CardFooter(
+                    dbc.Button(
+                        "Predict Grade", id="predict-btn", color="primary", className="w-100 fw-bold", size="lg"
+                    ),
+                    className="p-0"
+                )
+            ]), width=6
+        ), className="justify-content-center mb-4"
+    ),
+    # Prediction Result Modal
+    dbc.Modal([
+        dbc.ModalHeader(dbc.ModalTitle("Prediction Result")),
+        dbc.ModalBody(id='modal-body'),
+        dbc.ModalFooter(
+            dbc.Button("Close", id='close-modal', className="ms-auto", n_clicks=0)
+        )
+    ], id='prediction-modal', is_open=False)
+], fluid=True)
 
-    dbc.Row([
-        dbc.Col([
-
-            html.H2("Welcome to the Performance Predictions Page"),
-            html.P("This page provides insights from the performance predictions."),
-
-
-            html.H3("Chooose your features!"),
-
-        ],align="center", className="text-center", style={'margin-bottom': '50px'}),
-    ]),
-
-    
-    # Input Fields
-    dbc.Row([
-        dbc.Col([
-
-            html.Label("Age:"),
-
-            dcc.Input(id='age', type='number', placeholder='Enter Age'),
-
-        ]),
-
-        dbc.Col([
-
-            html.Label("Gender:"),
-
-            dcc.Dropdown(
-                id ='gender-dropdown',
-                options=[
-                    {'label': 'Male', 'value': '1'},
-                    {'label': 'Female', 'value': '0'}
-                ],
-                placeholder="Select Gender"
-            ),
-
-        ]),
-    ]),
-    
-    dbc.Row([
-        dbc.Col([
-
-            html.Label("Ethnicity:"),
-
-            dcc.Dropdown(
-                id='ethnicity-dropdown',
-                options=[
-                    {'label': 'Group 0', 'value': '0'},
-                    {'label': 'Group 1', 'value': '1'},
-                    {'label': 'Group 2', 'value': '2'},
-                    {'label': 'Group 3', 'value': '3'}
-                ],
-                placeholder="Select Ethnicity"
-            ),
-
-        ]),
-    ]),
-
-    dbc.Row([
-        dbc.Col([
-            
-            html.Label("Study Time Weekly (hours):"),
-            dcc.Input(id='study-time', type='number', placeholder='Enter Weekly Study Time'),
-
-        ]),
-
-        dbc.Col([
-
-            html.Label("Absences:"),
-            dcc.Input(id='absences', type='number', placeholder='Enter Absences'),
-
-        ]),
-    ]),
-    
-    dbc.Row([
-        dbc.Col([
-
-            html.Label("Parental Support:"),
-
-            dcc.RadioItems(
-                id='parental-support',
-                options=[
-                    {'label': 'Yes', 'value': '1'},
-                    {'label': 'No', 'value': '0'}
-                ],
-                value='Yes'
-            ),
-
-        ]),
-    ]),
-    
-
-    dbc.Row([
-        dbc.Col([
-
-            html.Label("Select Model:"),
-
-            dcc.Dropdown(
-                id='model-dropdown',
-                options=[
-                    {'label': 'Logistic Regression', 'value': 'logistic'},
-                    {'label': 'Random Forest', 'value': 'random_forest'},
-                    {'label': 'XGBoost', 'value': 'xgboost'},
-                    {'label': 'Neural Network', 'value': 'neural_network'}
-                ],
-                value='logistic'
-            ),
-
-        ]),
-
-        dbc.Col([
-
-            dbc.Button('Predict', id='predict-button'),
-
-        ]),
-    ],
-    justify='center',align='center', style={'margin-top': '20px'}),
-    
-    # Prediction Output
-    html.Div(id='prediction-output')
-])
-
-# Callback for handling predictions
+# Callback to handle predictions and modal toggling
 @callback(
-    Output('prediction-output', 'children'),
+    Output('prediction-modal', 'is_open'),
+    Output('modal-body', 'children'),
     [
-        Input('predict-button', 'n_clicks'),
-        Input('age', 'value'),
-        Input('gender-dropdown', 'value'),
-        Input('ethnicity-dropdown', 'value'),
-        Input('study-time', 'value'),
-        Input('absences', 'value'),
-        Input('parental-support', 'value'),
-        Input('model-dropdown', 'value')
+        Input('predict-btn', 'n_clicks'),
+        Input('close-modal', 'n_clicks'),
+        *[Input(field['id'], 'value') for field in INPUT_FIELDS],
+        Input('model-select', 'value')
     ]
 )
+def predict(n_clicks, close_clicks, *values_and_model):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return False, None
+    trig_id = ctx.triggered[0]['prop_id'].split('.')[0]
 
-def predict_student_performance(n_clicks, age, gender, ethnicity, study_time, absences, parental_support, model_type):
-    if n_clicks is None:
-        return ""
+    # Close modal if clicked
+    if trig_id == 'close-modal':
+        return False, dash.no_update
 
-    # Convert inputs into a numpy array (ensure correct data types)
-    input_data = np.array([[age, gender, ethnicity, study_time, absences, parental_support]])
-    
-    # Preprocessing (e.g., encoding categorical variables if needed)
-    # Example of encoding categorical variables:
-    input_data[0, 1] = 1 if input_data[0, 1] == 'Male' else 0  # Gender: Male=1, Female=0
-    input_data[0, 3] = {'Group 0': 0, 'Group 1': 1, 'Group 2': 2, 'Group 3': 3}.get(input_data[0, 3], -1)  # Encode Ethnicity
+    # On predict button click, compute and show prediction
+    if trig_id == 'predict-btn':
+        # Map inputs to DataFrame
+        ids = [field['id'] for field in INPUT_FIELDS]
+        cols = ['Age', 'Gender', 'Ethnicity', 'ParentalEducation', 'StudyTime', 'Absences',
+                'Tutoring', 'ParentalSupport', 'Extracurricular', 'Sports', 'Music', 'Volunteering']
+        raw_vals = dict(zip(ids, values_and_model[:-1]))
+        df = pd.DataFrame([{cols[i]: raw_vals[ids[i]] for i in range(len(ids))}])
 
-    # Select the model based on user input
-    model = None
-    if model_type == 'logistic':
-        model = logistic_model
-    elif model_type == 'random_forest':
-        model = random_forest_model
-    elif model_type == 'xgboost':
-        model = xgboost_model
-    elif model_type == 'neural_network':
-        model = neural_network_model
+        # Feature engineering
+        flags = ['Tutoring', 'Extracurricular', 'Sports', 'Music', 'Volunteering']
+        df['Engagement'] = df[flags].sum(axis=1)
+        df['FamilySupport'] = df['ParentalEducation'] * df['ParentalSupport']
+        cat_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        if cat_cols:
+            df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
 
-    # Ensure the model is available (you should load models from disk if not already trained)
-    if model is None:
-        return "Please select a valid model."
+        # Prepare features
+        X = df.values
+        model_key = values_and_model[-1]
+        model = loaded_models.get(model_key)
+        if model is None:
+            result = html.Div("Error: Model not found.", style={'color': 'red'})
+        else:
+            # Run prediction
+            raw_pred = model.predict(X)
+            # Grade mapping
+            grade_map = {
+                0: ("A", "GPA ≥ 3.5"),
+                1: ("B", "3.0 ≤ GPA < 3.5"),
+                2: ("C", "2.5 ≤ GPA < 3.0"),
+                3: ("D", "2.0 ≤ GPA < 2.5"),
+                4: ("F", "GPA < 2.0")
+            }
+            # Classification
+            if (hasattr(model, 'predict_proba') or
+                (isinstance(raw_pred, np.ndarray) and raw_pred.ndim > 1 and raw_pred.shape[1] > 1)):
+                probs = (model.predict_proba(X)[0] if hasattr(model, 'predict_proba') else raw_pred[0])
+                class_idx = int(np.argmax(probs))
+                letter, desc = grade_map.get(class_idx, ("?", ""))
+                conf = float(np.max(probs))
+                # Color: green for pass (not F), red for fail (F)
+                color = 'green' if class_idx != 4 else 'red'
+                result = html.Div([
+                    html.H4(f"Predicted Grade: {letter} ({desc})", style={'color': color}),
+                    html.P(f"Confidence: {conf:.2f}")
+                ])
+            else:
+                # Regression or single output (GPA)
+                pred_val = float(raw_pred[0]) if isinstance(raw_pred, np.ndarray) else float(raw_pred)
+                # Color: green for pass GPA >= 2.0, red otherwise
+                color = 'green' if pred_val >= 2.0 else 'red'
+                result = html.Div([
+                    html.H4(f"Predicted GPA: {pred_val:.2f}", style={'color': color})
+                ])
+        return True, result
 
-    #model.fit(X_train, y_train) 
-
-    # Make prediction
-    prediction = model.predict(input_data)
-    prediction_proba = model.predict_proba(input_data)[:, 1]  # Get probability for the positive class
-
-    # Display Prediction (color-coded result)
-    if prediction[0] == 1:
-        prediction_text = f"Predicted Grade Class: 1 (Pass) - Probability: {prediction_proba[0]:.2f}"
-        color = 'green'
-    else:
-        prediction_text = f"Predicted Grade Class: 0 (Fail) - Probability: {prediction_proba[0]:.2f}"
-        color = 'red'
-
-    return html.Div([
-        html.H4(prediction_text, style={'color': color}),
-        html.Div(f"Confidence: {prediction_proba[0]:.2f}", style={'color': color})
-    ])
+    return False, None
