@@ -47,16 +47,6 @@ def main():
         sys.exit(1)
     df = pd.read_csv(data_path)
 
-    # 2) Drop GPA if exists
-    if 'GPA' in df.columns:
-        df.drop(columns=['GPA'], inplace=True)
-
-    # 3) One‑hot encode categorical columns
-    cat_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
-    if cat_cols:
-        logging.info(f"One‑hot encoding columns: {cat_cols}")
-        df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
-
     # 4) Split features/target
     X = df.drop(columns=['GradeClass'])
     y = df['GradeClass']
