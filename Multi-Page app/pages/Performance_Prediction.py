@@ -87,10 +87,6 @@ layout = dbc.Container([
     dbc.Row(
         dbc.Col(
             dbc.Card([
-                dbc.CardHeader(
-                    "Prediction Form", className="text-center fw-bold fs-5",
-                    style={"backgroundColor": "#343a40", "color": "#f8f9fa"}
-                ),
                 dbc.CardBody(
                     [
                         *[create_form_row(f) for f in INPUT_FIELDS],
